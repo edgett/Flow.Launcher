@@ -14,6 +14,7 @@ using Flow.Launcher.Plugin.SharedModels;
 using System.Threading.Channels;
 using System.Xml;
 using Windows.ApplicationModel.Core;
+using Windows.UI.Composition;
 
 namespace Flow.Launcher.Plugin.Program.Programs
 {
@@ -96,8 +97,9 @@ namespace Flow.Launcher.Plugin.Program.Programs
                         var visualElement = appNode.SelectSingleNode($"*[local-name()='VisualElements']", namespaceManager);
                         var logoUri = visualElement?.Attributes[logoName]?.Value;
                         app.LogoPath = app.LogoPathFromUri(logoUri, (64, 64));
-                        var previewUri = visualElement?.Attributes[bigLogoName]?.Value;
-                        app.PreviewImagePath = app.LogoPathFromUri(previewUri, (128, 128));
+                        string previewUriTemp = visualElement?.Attributes[logoName]?.Value;
+                        string previewUri = previewUriTemp?.Replace(".png", ".targetsize-96.png");
+                        app.PreviewImagePath = app.LogoPathFromUri(previewUri, (96, 96));
                     }
                 }
             }
@@ -188,10 +190,10 @@ namespace Flow.Launcher.Plugin.Program.Programs
         private static readonly Dictionary<PackageVersion, string> bigLogoNameFromVersion = new()
         {
             {
-                PackageVersion.Windows10, "Square150x150Logo"
+                PackageVersion.Windows10, "Square310x310Logo"
             },
             {
-                PackageVersion.Windows81, "Square150x150Logo"
+                PackageVersion.Windows81, "Square310x310Logo"
             },
             {
                 PackageVersion.Windows8, "Logo"
@@ -405,8 +407,12 @@ namespace Flow.Launcher.Plugin.Program.Programs
                     Title = title,
                     SubTitle = Main._settings.HideAppsPath ? string.Empty : Location,
                     IcoPath = LogoPath,
-                    PreviewImage = PreviewImagePath,
-                    FullWidthPreview = false,
+                    Preview = new Result.PreviewInfo
+                    {
+                        IsMedia = false,
+                        PreviewImagePath = PreviewImagePath,
+                        Description = Description
+                    },
                     Score = matchResult.Score,
                     TitleHighlightData = matchResult.MatchData,
                     ContextData = this,
