@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 using System.Windows.Media;
 
 namespace Flow.Launcher.Plugin
@@ -79,6 +80,16 @@ namespace Flow.Launcher.Plugin
         /// Determines if Icon has a border radius
         /// </summary>
         public bool RoundedIcon { get; set; } = false;
+
+        /// <summary>
+        /// Full image used for preview panel
+        /// </summary>
+        public string PreviewImage { get; set; } = null;
+
+        /// <summary>
+        /// Determines if the preview image should occupy the full width of the preveiw panel.
+        /// </summary>
+        public bool FullWidthPreview { get; set; } = false;
 
         /// <summary>
         /// Delegate function, see <see cref="Icon"/>
@@ -204,6 +215,11 @@ namespace Flow.Launcher.Plugin
         public string SubTitleToolTip { get; set; }
 
         /// <summary>
+        /// Customized Preview Panel
+        /// </summary>
+        public Lazy<UserControl> PreviewPanel { get; set; }
+
+        /// <summary>
         /// Run this result, asynchronously
         /// </summary>
         /// <param name="context"></param>
@@ -223,5 +239,23 @@ namespace Flow.Launcher.Plugin
         /// </summary>
         /// <default>#26a0da (blue)</default>
         public string ProgressBarColor { get; set; } = "#26a0da";
+
+        /// <summary>
+        /// Suggests the preview image of result should use full width of the default preview panel by result's file extension.
+        /// </summary>
+        /// <param name="extension">File extension. Dot included.</param>
+        public static bool ShouldUseFullWidthPreview(string extension)
+        {
+            return extension is ".jpg"
+                or ".png"
+                or ".avi"
+                or ".mkv"
+                or ".bmp"
+                or ".gif"
+                or ".wmv"
+                or ".mp3"
+                or ".flac"
+                or ".mp4";
+        }
     }
 }
