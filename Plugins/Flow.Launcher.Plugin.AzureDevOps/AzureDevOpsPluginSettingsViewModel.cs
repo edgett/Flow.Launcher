@@ -91,8 +91,16 @@ namespace Flow.Launcher.Plugin.AzureDevOps
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-     
+        public AzureDevOpsSettings GetAzureDevopsSettings()
+        {
+            return new AzureDevOpsSettings
+            {
+                DevOpsUrl = this.DevOpsUrl,
+                DevOpsPat = this.DevOpsPat
+            };
+        }
 
-        
+
+
     }
 }

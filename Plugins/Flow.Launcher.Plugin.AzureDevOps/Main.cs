@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.Services.Common;
+﻿using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.Identity;
 using System;
 using System.Collections.Generic;
@@ -24,7 +24,17 @@ namespace Flow.Launcher.Plugin.AzureDevOps
 
         public Control CreateSettingPanel()
         {
-            return new AzureDevOpsPluginSettings();
+            var settings = _context.API.LoadSettingJsonStorage<AzureDevOpsSettings>();
+            var settingsUi = new AzureDevOpsPluginSettings(settings);
+            settingsUi.SettingsChanged += (sender, newSettings) =>
+            {
+                if (!settings.Equals(newSettings))
+                {
+                    settings.Update(newSettings);
+                    _context.API.SaveSettingJsonStorage<AzureDevOpsSettings>();
+                }
+            };
+            return settingsUi;
         }
 
         public Task InitAsync(PluginInitContext context)
