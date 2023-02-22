@@ -11,9 +11,10 @@ using System.Windows.Controls;
 
 namespace Flow.Launcher.Plugin.AzureDevOps
 {
-    public class Main : IAsyncPlugin, ISettingProvider, ISavable
+    public class Main : IAsyncPlugin, ISettingProvider
     {
         private PluginInitContext _context;
+        private AzureDevOpsSettings _azureDevOpsSettings;
 
         public Main()
         {
@@ -24,13 +25,13 @@ namespace Flow.Launcher.Plugin.AzureDevOps
 
         public Control CreateSettingPanel()
         {
-            var settings = _context.API.LoadSettingJsonStorage<AzureDevOpsSettings>();
-            var settingsUi = new AzureDevOpsPluginSettings(settings);
+            
+            var settingsUi = new AzureDevOpsPluginSettings(_azureDevOpsSettings);
             settingsUi.SettingsChanged += (sender, newSettings) =>
             {
-                if (!settings.Equals(newSettings))
+                if (!_azureDevOpsSettings.Equals(newSettings))
                 {
-                    settings.Update(newSettings);
+                    _azureDevOpsSettings.Update(newSettings);
                     _context.API.SaveSettingJsonStorage<AzureDevOpsSettings>();
                 }
             };
@@ -39,6 +40,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps
 
         public Task InitAsync(PluginInitContext context)
         {
+            _azureDevOpsSettings = _context.API.LoadSettingJsonStorage<AzureDevOpsSettings>();
             _context = context;
             return Task.FromResult(true);
         }
@@ -61,11 +63,6 @@ namespace Flow.Launcher.Plugin.AzureDevOps
 
 
             return results;
-            
-        }
-
-        public void Save()
-        {
             
         }
     }

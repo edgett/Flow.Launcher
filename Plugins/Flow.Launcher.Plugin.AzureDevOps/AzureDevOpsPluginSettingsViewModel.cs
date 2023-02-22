@@ -44,43 +44,10 @@ namespace Flow.Launcher.Plugin.AzureDevOps
         public async Task CheckPat()
         {
             EnableControls = false;
-          
-
-            Uri? devOpsUri = null;
-            if (!Uri.TryCreate(DevOpsUrl, new UriCreationOptions(), out devOpsUri) || devOpsUri == null)
-            {
-                Message = "Invalid Azure DevOps Url.";
-                IsAuthenticated = false;
-                EnableControls = true;
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(DevOpsPat))
-            {
-                Message = "Invalid Azure DevOps Personal Access Token.";
-                IsAuthenticated = false;
-                EnableControls = true;
-                return;
-            }
-            
-
-            try
-            {
-                var creds = new VssBasicCredential(string.Empty, DevOpsPat);
-                VssConnection vssConnection = new VssConnection(devOpsUri, creds);
-                await vssConnection.ConnectAsync();
-
-                IsAuthenticated = true;
-                Message = "Successfully connected to Azure DevOps.";
-            }
-            catch (Exception ex)
-            {
-                IsAuthenticated = false;
-                Message = ex.ToString();
-            }
-
+            var (isAuthenticated, message) = await AzureDevOpsService.CheckConfig(GetAzureDevopsSettings());
+            IsAuthenticated = isAuthenticated;
+            Message = message;
             EnableControls = true;
-
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
