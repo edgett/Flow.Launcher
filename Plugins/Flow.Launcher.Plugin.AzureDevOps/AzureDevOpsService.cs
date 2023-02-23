@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +27,9 @@ namespace Flow.Launcher.Plugin.AzureDevOps
     {
         private readonly ProjectHttpClient _projectClient;
         private readonly WorkItemTrackingHttpClient _workItemClient;
-        private static MemoryCache memoryCache { get; set; } = new MemoryCache(new MemoryCacheOptions());
+        private readonly HttpClient _httpClient = new HttpClient();
+        private static MemoryCache _memoryCache { get;} = new MemoryCache(new MemoryCacheOptions());
+        private static MemoryCache _iconCache { get; } = new MemoryCache(new MemoryCacheOptions());
 
         public AzureDevOpsService(AzureDevOpsSettings settings)
         {
@@ -164,21 +167,39 @@ namespace Flow.Launcher.Plugin.AzureDevOps
         }
         public async Task<List<WorkItemType>> GetWorkItemTypes(string project, CancellationToken cancellationToken = default)
         {
-            var wiTypes = await memoryCache.GetOrCreateAsync<List<WorkItemType>>("iconList", async (e) =>
+            var wiTypes = await _memoryCache.GetOrCreateAsync<List<WorkItemType>>("iconList", async (e) =>
             {
                 var wiTypes = await _workItemClient.GetWorkItemTypesAsync(project, cancellationToken: cancellationToken);
                 return wiTypes;
-            
+
             });
-            
+
             return wiTypes;
         }
 
-        public ImageSource GetSvgAsImageSource(string urlToSvg)
+        public ImageSource GetWorkItemImage(WorkItem workItem)
         {
-            var wc = new System.Net.WebClient();
-            var svgBytes =  wc.DownloadData(urlToSvg);
-            var svgStream = new MemoryStream(svgBytes);
+            var workItemTypes = this.GetWorkItemTypes((string)workItem.Fields["System.TeamProject"]).GetAwaiter().GetResult();
+            var thisWiType = workItemTypes.SingleOrDefault(t => t.Name == workItem.Fields["System.WorkItemType"].ToString());
+            var wiIcon = GetImageSourceFromSvgUrlCache(thisWiType.Icon.Url).GetAwaiter().GetResult();
+            return wiIcon;
+        }
+
+        public async Task<ImageSource> GetImageSourceFromSvgUrlCache(string svgUrl)
+        {
+      
+                var imgSrc =  _iconCache.GetOrCreate<ImageSource>(svgUrl, (e)=>{
+                    return GetImageSourceFromSvgUrl(svgUrl);
+                });
+
+
+                return imgSrc;
+          
+        }
+
+        public ImageSource GetImageSourceFromSvgUrl(string svgUrl)
+        {
+            var svgStream = _httpClient.GetStreamAsync(new Uri(svgUrl)).GetAwaiter().GetResult();
             var imgStream = new MemoryStream();
             var svgConverter = new SharpVectors.Converters.StreamSvgConverter(false, false, null);
             svgConverter.Convert(svgStream, imgStream);
@@ -190,8 +211,6 @@ namespace Flow.Launcher.Plugin.AzureDevOps
 
             return imageSource;
         }
-
-
     }
 
 

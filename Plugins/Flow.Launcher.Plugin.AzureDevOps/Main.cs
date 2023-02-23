@@ -95,7 +95,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps
                         SubTitle = (string)workItem.Fields["System.TeamProject"],
                         Icon = new Result.IconDelegate(() =>
                         {
-                            var icon = _devOpsService.GetSvgAsImageSource(thisWiType.Icon.Url);
+                            var icon = _devOpsService.GetWorkItemImage(workItem);
                             return icon;
                         }),
                         Action = e =>
