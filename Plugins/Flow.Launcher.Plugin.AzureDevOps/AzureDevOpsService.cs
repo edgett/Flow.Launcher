@@ -1,10 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Documents;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.Framework.Common;
 using Microsoft.TeamFoundation.Work.WebApi;
@@ -20,6 +26,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps
     {
         private readonly ProjectHttpClient _projectClient;
         private readonly WorkItemTrackingHttpClient _workItemClient;
+        private static MemoryCache memoryCache { get; set; } = new MemoryCache(new MemoryCacheOptions());
 
         public AzureDevOpsService(AzureDevOpsSettings settings)
         {
@@ -29,9 +36,10 @@ namespace Flow.Launcher.Plugin.AzureDevOps
             VssConnection = new VssConnection(devOpsUri, creds);
             _projectClient = VssConnection.GetClient<ProjectHttpClient>();
             _workItemClient = VssConnection.GetClient<WorkItemTrackingHttpClient>();
+
         }
 
-        public  VssConnection VssConnection { get; }
+        public VssConnection VssConnection { get; }
         public AzureDevOpsSettings Settings { get; }
 
 
@@ -85,16 +93,16 @@ namespace Flow.Launcher.Plugin.AzureDevOps
 
         public async IAsyncEnumerable<WorkItem> SearchWorkItems(string search, string project, CancellationToken cancellationToken = default)
         {
-            
+
 
             var wiql = new Wiql();
             wiql.Query = buildWiql(search, project);
 
             var workItemsQueryResult = await _workItemClient.QueryByWiqlAsync(wiql, top: 10, cancellationToken: cancellationToken);
-           
+
             foreach (var wi in workItemsQueryResult.WorkItems)
             {
-                var workItem = await _workItemClient.GetWorkItemAsync(project, wi.Id, fields:new List<string>() { "System.Title", "System.TeamProject" }, cancellationToken: cancellationToken);
+                var workItem = await _workItemClient.GetWorkItemAsync(project, wi.Id, fields: new List<string>() { "System.Title", "System.TeamProject", "System.WorkItemType" }, cancellationToken: cancellationToken);
                 yield return workItem;
             }
 
@@ -105,7 +113,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps
         {
             search = escapeWiQl(search);
 
-            var wiqlString = $@"Select [Id] 
+            var wiqlString = $@"Select [Id]
                     From WorkItems 
                     Where 
                     [System.TeamProject] = '{project}'
@@ -134,7 +142,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps
             Uri? devOpsUri = null;
             if (!Uri.TryCreate(settings.DevOpsUrl, new UriCreationOptions(), out devOpsUri) || devOpsUri == null)
             {
-                return new (false, "Invalid Azure DevOps Url.");
+                return new(false, "Invalid Azure DevOps Url.");
             }
 
             if (string.IsNullOrWhiteSpace(settings.DevOpsPat))
@@ -147,12 +155,45 @@ namespace Flow.Launcher.Plugin.AzureDevOps
                 var creds = new VssBasicCredential(string.Empty, settings.DevOpsPat);
                 VssConnection vssConnection = new VssConnection(devOpsUri, creds);
                 await vssConnection.ConnectAsync();
-                return new(true, "Successfully connected to Azure DevOps."); ;   
+                return new(true, "Successfully connected to Azure DevOps."); ;
             }
             catch (Exception ex)
             {
                 return new(false, ex.ToString()); ;
             }
         }
+        public async Task<List<WorkItemType>> GetWorkItemTypes(string project, CancellationToken cancellationToken = default)
+        {
+            var wiTypes = await memoryCache.GetOrCreateAsync<List<WorkItemType>>("iconList", async (e) =>
+            {
+                var wiTypes = await _workItemClient.GetWorkItemTypesAsync(project, cancellationToken: cancellationToken);
+                return wiTypes;
+            
+            });
+            
+            return wiTypes;
+        }
+
+        public ImageSource GetSvgAsImageSource(string urlToSvg)
+        {
+            var wc = new System.Net.WebClient();
+            var svgBytes =  wc.DownloadData(urlToSvg);
+            var svgStream = new MemoryStream(svgBytes);
+            var imgStream = new MemoryStream();
+            var svgConverter = new SharpVectors.Converters.StreamSvgConverter(false, false, null);
+            svgConverter.Convert(svgStream, imgStream);
+
+            var imageSource = new BitmapImage { CacheOption = BitmapCacheOption.OnLoad };
+            imageSource.BeginInit();
+            imageSource.StreamSource = imgStream;
+            imageSource.EndInit();
+
+            return imageSource;
+        }
+
+
     }
+
+
+
 }

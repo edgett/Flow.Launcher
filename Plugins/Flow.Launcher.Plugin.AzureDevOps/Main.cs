@@ -8,7 +8,8 @@ using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
-
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace Flow.Launcher.Plugin.AzureDevOps
 {
@@ -83,10 +84,20 @@ namespace Flow.Launcher.Plugin.AzureDevOps
                 while (await workItemsEnum.MoveNextAsync())
                 {
                     var workItem = workItemsEnum.Current;
+                    var workItemTypes = await _devOpsService.GetWorkItemTypes((string)workItem.Fields["System.TeamProject"]);
+                    var thisWiType = workItemTypes.SingleOrDefault(t => t.Name == workItem.Fields["System.WorkItemType"].ToString());
+
+
+
                     results.Add(new Result
                     {
                         Title = (string)workItem.Fields["System.Title"],
                         SubTitle = (string)workItem.Fields["System.TeamProject"],
+                        Icon = new Result.IconDelegate(() =>
+                        {
+                            var icon = _devOpsService.GetSvgAsImageSource(thisWiType.Icon.Url);
+                            return icon;
+                        }),
                         Action = e =>
                         {
                             _context.API.OpenUrl(workItem.Links.Links["html"].ToString());
