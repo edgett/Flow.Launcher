@@ -12,7 +12,7 @@ using System.Windows.Controls;
 
 namespace Flow.Launcher.Plugin.AzureDevOps
 {
-    public class Main : IAsyncPlugin, ISettingProvider
+    public class Main : IAsyncPlugin, ISettingProvider, IResultUpdated
     {
         private PluginInitContext _context;
         private AzureDevOpsService? _devOpsService;
@@ -24,6 +24,8 @@ namespace Flow.Launcher.Plugin.AzureDevOps
             TypeDescriptor.AddAttributes(typeof(IdentityDescriptor), new TypeConverterAttribute(typeof(IdentityDescriptorConverter).FullName));
             TypeDescriptor.AddAttributes(typeof(SubjectDescriptor), new TypeConverterAttribute(typeof(SubjectDescriptorConverter).FullName));
         }
+
+        public event ResultUpdatedEventHandler ResultsUpdated;
 
         public Control CreateSettingPanel()
         {
@@ -52,7 +54,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps
         }
 
         public async Task<List<Result>> QueryAsync(Query query, CancellationToken cancellationToken)
-        {
+         {
             var results = new List<Result>();
             var userInputSplit = query.Search.Split(" ");
             var devOpsSearch = "";
@@ -74,7 +76,8 @@ namespace Flow.Launcher.Plugin.AzureDevOps
             
             if (_devOpsService != null)
             {
-                var workItems = _devOpsService.SearchWorkItems(query.Search, cancellationToken);
+                var workItems = _devOpsService.SearchWorkItems(devOpsSearch, cancellationToken);
+
                 var workItemsEnum = workItems.GetAsyncEnumerator(cancellationToken);
 
                 while (await workItemsEnum.MoveNextAsync())
@@ -86,25 +89,18 @@ namespace Flow.Launcher.Plugin.AzureDevOps
                         SubTitle = (string)workItem.Fields["System.TeamProject"],
                         Action = e =>
                         {
-                            _context.API.OpenUrl(workItem.Url);
+                            _context.API.OpenUrl(workItem.Links.Links["html"].ToString());
                             return true;
                         }
                     });
+
+                    var resultUpdateArgs = new ResultUpdatedEventArgs();
+                    resultUpdateArgs.Results = results;
+                    resultUpdateArgs.Query = query;
+                    ResultsUpdated.Invoke(this, resultUpdateArgs);
                 }
             }
-
-            //results.Add(new Result
-            //{
-            //    Title = "Test",
-            //    SubTitle = "Test",
-            //    //IcoPath = "Images\\icon.png",
-            //    Action = e =>
-            //    {
-            //        _context.API.ChangeQuery("Test");
-            //        return false;
-            //    }
-            //});
-
+                
             return results;
         }
 

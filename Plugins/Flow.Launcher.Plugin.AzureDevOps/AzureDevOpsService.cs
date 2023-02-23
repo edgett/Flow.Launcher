@@ -18,7 +18,8 @@ namespace Flow.Launcher.Plugin.AzureDevOps
 {
     public class AzureDevOpsService
     {
-        private ProjectHttpClient _projectClient;
+        private readonly ProjectHttpClient _projectClient;
+        private readonly WorkItemTrackingHttpClient _workItemClient;
 
         public AzureDevOpsService(AzureDevOpsSettings settings)
         {
@@ -26,20 +27,17 @@ namespace Flow.Launcher.Plugin.AzureDevOps
             var creds = new VssBasicCredential(string.Empty, settings.DevOpsPat);
             var devOpsUri = new Uri(settings.DevOpsUrl);
             VssConnection = new VssConnection(devOpsUri, creds);
-
-
+            _projectClient = VssConnection.GetClient<ProjectHttpClient>();
+            _workItemClient = VssConnection.GetClient<WorkItemTrackingHttpClient>();
         }
 
-        public VssConnection VssConnection { get; }
+        public  VssConnection VssConnection { get; }
         public AzureDevOpsSettings Settings { get; }
 
 
         public async IAsyncEnumerable<TeamProjectReference> ListProjectsAsync(CancellationToken cancellationToken = default)
         {
-            var projectClient = await VssConnection.GetClientAsync<ProjectHttpClient>(cancellationToken);
-            var projects = await projectClient.GetProjects();
-
-
+            var projects = await _projectClient.GetProjects();
 
             foreach (var p in projects)
             {
@@ -48,7 +46,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps
 
             while (!string.IsNullOrWhiteSpace(projects.ContinuationToken))
             {
-                projects = await projectClient.GetProjects(continuationToken: projects.ContinuationToken);
+                projects = await _projectClient.GetProjects(continuationToken: projects.ContinuationToken);
 
                 foreach (var p in projects)
                 {
@@ -87,16 +85,16 @@ namespace Flow.Launcher.Plugin.AzureDevOps
 
         public async IAsyncEnumerable<WorkItem> SearchWorkItems(string search, string project, CancellationToken cancellationToken = default)
         {
-            var workItemClient = await VssConnection.GetClientAsync<WorkItemTrackingHttpClient>();
+            
 
             var wiql = new Wiql();
             wiql.Query = buildWiql(search, project);
 
-            var workItemsQueryResult = await workItemClient.QueryByWiqlAsync(wiql, top: 10, cancellationToken: cancellationToken);
+            var workItemsQueryResult = await _workItemClient.QueryByWiqlAsync(wiql, top: 10, cancellationToken: cancellationToken);
            
             foreach (var wi in workItemsQueryResult.WorkItems)
             {
-                var workItem = await workItemClient.GetWorkItemAsync(project, wi.Id, fields:new List<string>() { "System.Title", "System.TeamProject" }, cancellationToken: cancellationToken);
+                var workItem = await _workItemClient.GetWorkItemAsync(project, wi.Id, fields:new List<string>() { "System.Title", "System.TeamProject" }, cancellationToken: cancellationToken);
                 yield return workItem;
             }
 
