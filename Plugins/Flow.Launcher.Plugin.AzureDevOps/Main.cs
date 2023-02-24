@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.Identity;
+using Microsoft.VisualStudio.Services.WebApi;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -100,7 +101,8 @@ namespace Flow.Launcher.Plugin.AzureDevOps
                         }),
                         Action = e =>
                         {
-                            _context.API.OpenUrl(workItem.Links.Links["html"].ToString());
+                            var wiLink = workItem.Links.Links["html"] as ReferenceLink;
+                            _context.API.OpenUrl(wiLink.Href);
                             return true;
                         }
                     });
