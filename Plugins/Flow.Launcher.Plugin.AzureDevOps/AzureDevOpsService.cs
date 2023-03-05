@@ -167,7 +167,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps
         }
         public async Task<List<WorkItemType>> GetWorkItemTypes(string project, CancellationToken cancellationToken = default)
         {
-            var wiTypes = await _memoryCache.GetOrCreateAsync<List<WorkItemType>>("iconList", async (e) =>
+            var wiTypes = await _memoryCache.GetOrCreateAsync<List<WorkItemType>>($"iconList-{project}", async (e) =>
             {
                 var wiTypes = await _workItemClient.GetWorkItemTypesAsync(project, cancellationToken: cancellationToken);
                 return wiTypes;
@@ -182,7 +182,8 @@ namespace Flow.Launcher.Plugin.AzureDevOps
             var workItemTypes = this.GetWorkItemTypes((string)workItem.Fields["System.TeamProject"]).GetAwaiter().GetResult();
             var thisWiType = workItemTypes.SingleOrDefault(t => t.Name == workItem.Fields["System.WorkItemType"].ToString());
             var wiIcon = GetImageSourceFromSvgUrlCache(thisWiType.Icon.Url).GetAwaiter().GetResult();
-            return wiIcon;
+
+           return wiIcon;
         }
 
         public async Task<ImageSource> GetImageSourceFromSvgUrlCache(string svgUrl)
