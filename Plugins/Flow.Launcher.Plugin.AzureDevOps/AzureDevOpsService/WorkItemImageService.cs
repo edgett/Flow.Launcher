@@ -10,6 +10,8 @@ using System.Windows.Media;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using System.Reflection;
+using System.Windows.Threading;
+using System.Threading;
 
 namespace Flow.Launcher.Plugin.AzureDevOps.AzureDevOpsService
 {
@@ -24,47 +26,59 @@ namespace Flow.Launcher.Plugin.AzureDevOps.AzureDevOpsService
             //_defaultIcon = makeDefaultIcon();
         }
 
-        public ImageSource GetWorkItemImage(WorkItem workItem)
+        public async Task<ImageSource> GetWorkItemImageAsync(WorkItem workItem, CancellationToken cancellationToken)
         {
 
+            try
+            {
 
-            var workItemTypes = _workItemTypeService.GetWorkItemTypes((string)workItem.Fields["System.TeamProject"]).GetAwaiter().GetResult();
-            var thisWiType = workItemTypes.SingleOrDefault(t => t.Name == workItem.Fields["System.WorkItemType"].ToString());
-            var wiIcon = GetImageSourceFromSvgUrlCache(thisWiType.Icon.Url).GetAwaiter().GetResult();
-            return wiIcon;
+                var workItemTypes = await _workItemTypeService.GetWorkItemTypes((string)workItem.Fields["System.TeamProject"], cancellationToken);
+                var thisWiType = workItemTypes.SingleOrDefault(t => t.Name == workItem.Fields["System.WorkItemType"].ToString());
+                var wiIcon =  await GetImageSourceFromSvgUrlCache(thisWiType.Icon.Url, cancellationToken);
+                return wiIcon;
+            }
+            catch (Exception ex)
+            {
 
-            
+                throw ex;
+            }
+
+       
+
+            //return makeDefaultIcon();
           
         }
 
-        public async Task<ImageSource> GetImageSourceFromSvgUrlCache(string svgUrl)
+        public async Task<ImageSource> GetImageSourceFromSvgUrlCache(string svgUrl, CancellationToken cancellationToken)
         {
 
-            var imgSrc = ConfigService.WorkItemIconCache.GetOrCreate<ImageSource>(svgUrl, (e) => {
-                return GetImageSourceFromSvgUrl(svgUrl);
+            var imageMs = await ConfigService.WorkItemIconCache.GetOrCreateAsync<MemoryStream>(svgUrl, async (e) => {
+                var ms = await GetImageMemoryStreamFromSvgUrl(svgUrl, cancellationToken);
+                return ms;
             });
+            imageMs.Position = 0;
 
-
-            return imgSrc;
+            var imageSource = new BitmapImage { };
+            imageSource.BeginInit();
+            imageSource.StreamSource = imageMs;
+            imageSource.EndInit();
+            imageSource.Freeze();
+            
+            
+            return imageSource;
         }
 
-        public ImageSource GetImageSourceFromSvgUrl(string svgUrl)
+        public async Task<MemoryStream> GetImageMemoryStreamFromSvgUrl(string svgUrl, CancellationToken cancellationToken)
         {
-            var svgStream = ConfigService.HttpClient.GetStreamAsync(new Uri(svgUrl)).GetAwaiter().GetResult();
+            var svgStream = await ConfigService.HttpClient.GetStreamAsync(new Uri(svgUrl), cancellationToken);
             var imgStream = new MemoryStream();
             var svgConverter = new SharpVectors.Converters.StreamSvgConverter(false, false, null);
             svgConverter.Convert(svgStream, imgStream);
 
-            var imageSource = new BitmapImage { CacheOption = BitmapCacheOption.OnLoad };
-            imageSource.BeginInit();
-            imageSource.StreamSource = imgStream;
-            imageSource.EndInit();
-            imageSource.Freeze();
-
-            return imageSource;
+            return imgStream;
         }
 
-        private ImageSource makeDefaultIcon()
+        public ImageSource MakeDefaultIcon()
         {
             var thisDllPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var defaultIconPath = Path.Combine(thisDllPath, "Images", "AzureDevOps.png");

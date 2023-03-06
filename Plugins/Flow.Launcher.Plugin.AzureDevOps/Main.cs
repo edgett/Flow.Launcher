@@ -98,7 +98,8 @@ namespace Flow.Launcher.Plugin.AzureDevOps
                     var workItem = workItemsEnum.Current;
                     var wiTitle = (string)workItem.Fields["System.Title"];
                     var wiProjectName = (string)workItem.Fields["System.TeamProject"];
-                    
+
+
 
                     results.Add(new Result
                     {
@@ -106,8 +107,18 @@ namespace Flow.Launcher.Plugin.AzureDevOps
                         SubTitle = wiProjectName,
                         Icon = new Result.IconDelegate(() =>
                         {
-                            var icon = _workItemImageService.GetWorkItemImage(workItemsEnum.Current);
-                            return icon;
+                            ImageSource icon = new BitmapImage();
+                            var hasIcon = false;
+
+                            var t = Task.Run(async () => {
+                                icon = await _workItemImageService.GetWorkItemImageAsync(workItem, cancellationToken);
+                                hasIcon = true;
+                            }, cancellationToken);
+
+                            t.Wait();
+
+                            var ricon = hasIcon ? icon : _workItemImageService.MakeDefaultIcon();
+                            return ricon;
                         }),
                         Action = e =>
                         {
