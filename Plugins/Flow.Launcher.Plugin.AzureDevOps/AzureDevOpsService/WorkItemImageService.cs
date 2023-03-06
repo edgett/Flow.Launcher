@@ -26,27 +26,29 @@ namespace Flow.Launcher.Plugin.AzureDevOps.AzureDevOpsService
             //_defaultIcon = makeDefaultIcon();
         }
 
+        public ImageSource GetWorkItemImage(WorkItem workItem, CancellationToken cancellationToken)
+        {
+            ImageSource icon = new BitmapImage();
+            var hasIcon = false;
+
+            var t = Task.Run(async () =>
+            {
+                icon = await GetWorkItemImageAsync(workItem, cancellationToken);
+                hasIcon = true;
+            }, cancellationToken);
+
+            t.Wait();
+
+            var ricon = hasIcon ? icon : MakeDefaultIcon();
+            return ricon;
+        }
+
         public async Task<ImageSource> GetWorkItemImageAsync(WorkItem workItem, CancellationToken cancellationToken)
         {
-
-            try
-            {
-
-                var workItemTypes = await _workItemTypeService.GetWorkItemTypes((string)workItem.Fields["System.TeamProject"], cancellationToken);
-                var thisWiType = workItemTypes.SingleOrDefault(t => t.Name == workItem.Fields["System.WorkItemType"].ToString());
-                var wiIcon =  await GetImageSourceFromSvgUrlCache(thisWiType.Icon.Url, cancellationToken);
-                return wiIcon;
-            }
-            catch (Exception ex)
-            {
-
-                throw ex;
-            }
-
-       
-
-            //return makeDefaultIcon();
-          
+            var workItemTypes = await _workItemTypeService.GetWorkItemTypes((string)workItem.Fields["System.TeamProject"], cancellationToken);
+            var thisWiType = workItemTypes.SingleOrDefault(t => t.Name == workItem.Fields["System.WorkItemType"].ToString());
+            var wiIcon = await GetImageSourceFromSvgUrlCache(thisWiType.Icon.Url, cancellationToken);
+            return wiIcon;
         }
 
         public async Task<ImageSource> GetImageSourceFromSvgUrlCache(string svgUrl, CancellationToken cancellationToken)

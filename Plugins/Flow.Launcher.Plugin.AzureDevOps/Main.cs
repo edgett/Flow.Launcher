@@ -107,18 +107,8 @@ namespace Flow.Launcher.Plugin.AzureDevOps
                         SubTitle = wiProjectName,
                         Icon = new Result.IconDelegate(() =>
                         {
-                            ImageSource icon = new BitmapImage();
-                            var hasIcon = false;
-
-                            var t = Task.Run(async () => {
-                                icon = await _workItemImageService.GetWorkItemImageAsync(workItem, cancellationToken);
-                                hasIcon = true;
-                            }, cancellationToken);
-
-                            t.Wait();
-
-                            var ricon = hasIcon ? icon : _workItemImageService.MakeDefaultIcon();
-                            return ricon;
+                            var img = _workItemImageService.GetWorkItemImage(workItem, cancellationToken);
+                            return img;
                         }),
                         Action = e =>
                         {
