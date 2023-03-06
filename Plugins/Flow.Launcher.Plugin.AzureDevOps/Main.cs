@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.Services.Common;
+﻿using Flow.Launcher.Plugin.AzureDevOps.AzureDevOpsService;
+using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.Identity;
 using Microsoft.VisualStudio.Services.WebApi;
 using System;
@@ -17,7 +18,11 @@ namespace Flow.Launcher.Plugin.AzureDevOps
     public class Main : IAsyncPlugin, ISettingProvider, IResultUpdated
     {
         private PluginInitContext _context;
-        private AzureDevOpsService? _devOpsService;
+        private ProjectService _projectService;
+        private WorkItemSearchService? _workItemSearchService;
+        private WorkItemTypeService _workItemTypeService;
+        private WorkItemImageService _workItemImageService;
+        private WorkItemService _workItemService;
         private AzureDevOpsSettings _azureDevOpsSettings;
 
         public Main()
@@ -49,9 +54,15 @@ namespace Flow.Launcher.Plugin.AzureDevOps
             _context = context;
             _azureDevOpsSettings = _context.API.LoadSettingJsonStorage<AzureDevOpsSettings>();
 
-            var (configOk, message) = await AzureDevOpsService.CheckConfig(_azureDevOpsSettings);
-            if (configOk) { 
-                _devOpsService = new AzureDevOpsService(_azureDevOpsSettings);
+            var (configOk, message) = await ConfigService.CheckConfig(_azureDevOpsSettings);
+            if (configOk) {
+                var azureDevOpsConfg = new ConfigService(_azureDevOpsSettings);
+                _projectService = new ProjectService(azureDevOpsConfg);
+                _workItemSearchService = new WorkItemSearchService(azureDevOpsConfg, _projectService);
+                _workItemTypeService = new WorkItemTypeService(azureDevOpsConfg);
+                _workItemImageService = new WorkItemImageService(_workItemTypeService);
+                _workItemService = new WorkItemService(azureDevOpsConfg);
+                
             }
         }
 
@@ -76,27 +87,26 @@ namespace Flow.Launcher.Plugin.AzureDevOps
             }
 
             
-            if (_devOpsService != null)
+            if (_workItemService != null)
             {
-                var workItems = _devOpsService.SearchWorkItems(devOpsSearch, cancellationToken);
+                var workItems = _workItemSearchService.SearchWorkItems(devOpsSearch, cancellationToken);
 
                 var workItemsEnum = workItems.GetAsyncEnumerator(cancellationToken);
 
                 while (await workItemsEnum.MoveNextAsync())
                 {
                     var workItem = workItemsEnum.Current;
-                    var workItemTypes = await _devOpsService.GetWorkItemTypes((string)workItem.Fields["System.TeamProject"]);
-                    var thisWiType = workItemTypes.SingleOrDefault(t => t.Name == workItem.Fields["System.WorkItemType"].ToString());
-
-
+                    var wiTitle = (string)workItem.Fields["System.Title"];
+                    var wiProjectName = (string)workItem.Fields["System.TeamProject"];
+                    
 
                     results.Add(new Result
                     {
-                        Title = (string)workItem.Fields["System.Title"],
-                        SubTitle = (string)workItem.Fields["System.TeamProject"],
+                        Title = wiTitle,
+                        SubTitle = wiProjectName,
                         Icon = new Result.IconDelegate(() =>
                         {
-                            var icon = _devOpsService.GetWorkItemImage(workItem);
+                            var icon = _workItemImageService.GetWorkItemImage(workItemsEnum.Current);
                             return icon;
                         }),
                         Action = e =>

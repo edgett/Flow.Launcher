@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.Services.Common;
+﻿using Flow.Launcher.Plugin.AzureDevOps.AzureDevOpsService;
+using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
 using System;
 using System.Collections.Generic;
@@ -44,7 +45,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps
         public async Task CheckPat()
         {
             EnableControls = false;
-            var (isAuthenticated, message) = await AzureDevOpsService.CheckConfig(GetAzureDevopsSettings());
+            var (isAuthenticated, message) = await ConfigService.CheckConfig(GetAzureDevopsSettings());
             IsAuthenticated = isAuthenticated;
             Message = message;
             EnableControls = true;
