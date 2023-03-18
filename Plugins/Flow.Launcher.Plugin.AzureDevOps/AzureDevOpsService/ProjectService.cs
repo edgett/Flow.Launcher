@@ -43,7 +43,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps
                 yield return p;
             }
 
-            while (!string.IsNullOrWhiteSpace(projects.ContinuationToken))
+            while (!string.IsNullOrWhiteSpace(projects.ContinuationToken) && !cancellationToken.IsCancellationRequested)
             {
                 projects = await _projectClient.GetProjects(continuationToken: projects.ContinuationToken);
 

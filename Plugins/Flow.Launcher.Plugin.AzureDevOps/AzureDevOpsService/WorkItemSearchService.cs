@@ -52,11 +52,11 @@ namespace Flow.Launcher.Plugin.AzureDevOps
         public async IAsyncEnumerable<WorkItem> SearchWorkItems(string search, CancellationToken cancellationToken = default)
         {
             var allProjects = _projectService.ListProjectsAsync(cancellationToken);
-            var allProjectsEnum = allProjects.GetAsyncEnumerator();
+            var allProjectsEnum = allProjects.GetAsyncEnumerator(cancellationToken);
             while (await allProjectsEnum.MoveNextAsync())
             {
                 var workItems = SearchWorkItems(search, allProjectsEnum.Current.Id, cancellationToken);
-                var workItemsEnum = workItems.GetAsyncEnumerator();
+                var workItemsEnum = workItems.GetAsyncEnumerator(cancellationToken);
                 while (await workItemsEnum.MoveNextAsync())
                 {
                     yield return workItemsEnum.Current;

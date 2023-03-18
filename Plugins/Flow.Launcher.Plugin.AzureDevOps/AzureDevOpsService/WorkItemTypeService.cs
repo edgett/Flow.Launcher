@@ -22,7 +22,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps.AzureDevOpsService
 
         public async Task<List<WorkItemType>> GetWorkItemTypes(string project, CancellationToken cancellationToken = default)
         {
-            var wiTypes = await ConfigService.WorkItemTypeCache.GetOrCreateAsync<List<WorkItemType>>($"iconList-{project}", async (e) =>
+            var wiTypes = await ConfigService.WorkItemTypeCache.GetOrCreateAsync<List<WorkItemType>>($"workitemtypes-{project}", async (e) =>
             {
                 var wiTypesc = await _workItemClient.GetWorkItemTypesAsync(project, cancellationToken: cancellationToken);
                 return wiTypesc;
@@ -34,7 +34,7 @@ namespace Flow.Launcher.Plugin.AzureDevOps.AzureDevOpsService
 
         public async Task<List<WorkItemType>> GetWorkItemTypes(Guid project, CancellationToken cancellationToken = default)
         {
-            var wiTypes = await ConfigService.WorkItemTypeCache.GetOrCreateAsync<List<WorkItemType>>($"iconList-{project}", async (e) =>
+            var wiTypes = await ConfigService.WorkItemTypeCache.GetOrCreateAsync<List<WorkItemType>>($"workitemtypes-{project}", async (e) =>
             {
                 var wiTypesc = await _workItemClient.GetWorkItemTypesAsync(project, cancellationToken: cancellationToken);
                 return wiTypesc;
