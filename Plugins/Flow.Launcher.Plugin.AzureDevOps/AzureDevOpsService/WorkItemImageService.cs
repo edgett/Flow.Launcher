@@ -18,12 +18,10 @@ namespace Flow.Launcher.Plugin.AzureDevOps.AzureDevOpsService
     public class WorkItemImageService
     {
         private readonly WorkItemTypeService _workItemTypeService;
-        private readonly ImageSource _defaultIcon;
 
         public WorkItemImageService(WorkItemTypeService workItemTypeService)
         {
             _workItemTypeService = workItemTypeService;
-            _defaultIcon = MakeDefaultIcon();
         }
 
         public ImageSource GetWorkItemImage(WorkItem workItem, CancellationToken cancellationToken)
@@ -38,8 +36,8 @@ namespace Flow.Launcher.Plugin.AzureDevOps.AzureDevOpsService
             }, cancellationToken);
 
             t.Wait();
-
-            var ricon = hasIcon ? icon : _defaultIcon;
+            
+            var ricon = hasIcon ? icon : MakeDefaultIcon();
             return ricon;
         }
 
